@@ -45,19 +45,14 @@ class ActionModule(ActionBase):
             display.v("The contents of {} are: {}".format(
                 merged_var_name, task_vars[merged_var_name]))
 
-        keys = [key for key in task_vars.keys()
-                if key.endswith(suffix_to_merge)]
-
-        display.v("Merging vars in this order: {}".format(keys))
-
-        merge_vals = [task_vars[key] for key in keys]
+        merge_vals = get_recursively(task_vars, suffix_to_merge)
 
         # Dispatch based on type that we're merging
         if merge_vals == []:
             if expected_type == 'list':
                 merged = []
             else:
-                merged = {} # pylint: disable=redefined-variable-type
+                merged = {}  # pylint: disable=redefined-variable-type
         elif isinstance(merge_vals[0], list):
             merged = merge_list(merge_vals, dedup)
         elif isinstance(merge_vals[0], dict):
@@ -75,6 +70,34 @@ class ActionModule(ActionBase):
             'ansible_facts': {merged_var_name: merged},
             'changed': False,
         }
+
+
+def get_recursively(search_dict, suffix_to_merge):
+    """
+    Takes a dict with nested lists and dicts,
+    and searches all dicts for a key with the suffix
+    provided.
+    """
+    fields_found = []
+
+    for key, value in search_dict.iteritems():
+
+        if key.endswith(suffix_to_merge):
+            fields_found.append(value)
+
+        elif isinstance(value, dict):
+            results = get_recursively(value, suffix_to_merge)
+            for result in results:
+                fields_found.append(result)
+
+        elif isinstance(value, list):
+            for item in value:
+                if isinstance(item, dict):
+                    more_results = get_recursively(item, suffix_to_merge)
+                    for another_result in more_results:
+                        fields_found.append(another_result)
+
+    return fields_found
 
 
 def merge_dict(merge_vals):
