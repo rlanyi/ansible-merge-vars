@@ -82,7 +82,7 @@ def get_recursively(search_dict, suffix_to_merge):
 
     for key, value in search_dict.iteritems():
 
-        if key.endswith(suffix_to_merge):
+        if str(key).endswith(suffix_to_merge):
             fields_found.append(value)
 
         elif isinstance(value, dict):
